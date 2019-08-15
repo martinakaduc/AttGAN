@@ -16,6 +16,7 @@ import tflib as tl
 
 import data
 import models
+import os
 
 
 # ==============================================================================
@@ -23,7 +24,7 @@ import models
 # ==============================================================================
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--experiment_name', dest='experiment_name', help='experiment_name')
+parser.add_argument('--experiment_name', dest='experiment_name', help='experiment_name', default='384_shortcut1_inject1_none')
 parser.add_argument('--test_int', dest='test_int', type=float, default=1.0, help='test_int')
 args_ = parser.parse_args()
 with open('./output/%s/setting.txt' % args_.experiment_name) as f:
@@ -83,6 +84,10 @@ except:
 
 # sample
 try:
+    # print(te_data)
+    # for idx, batch in enumerate(te_data):
+    #     print(idx)
+    #     print(batch)
     for idx, batch in enumerate(te_data):
         xa_sample_ipt = batch[0]
         a_sample_ipt = batch[1]
@@ -100,12 +105,14 @@ try:
                 _b_sample_ipt[..., i - 1] = _b_sample_ipt[..., i - 1] * test_int / thres_int
             x_sample_opt_list.append(sess.run(x_sample, feed_dict={xa_sample: xa_sample_ipt, _b_sample: _b_sample_ipt}))
         sample = np.concatenate(x_sample_opt_list, 2)
+        # print(x_sample)
 
-        save_dir = './output/%s/sample_testing' % experiment_name
+        save_dir = 'test/test_results'
         pylib.mkdir(save_dir)
-        im.imwrite(sample.squeeze(0), '%s/%d.png' % (save_dir, idx + 182638))
+        im.imwrite(sample.squeeze(0), '%s/%s' % (save_dir, te_data.name_list[idx]))
 
-        print('%d.png done!' % (idx + 182638))
+        print('%s done!' % (te_data.name_list[idx]))
+        os.remove('test/' + te_data.name_list[idx][:-4] + '_' + te_data.name_list[idx][-4:])
 
 except:
     traceback.print_exc()

@@ -9,6 +9,8 @@ import tensorflow as tf
 import tensorflow.contrib.eager as tfe
 from tflib.utils import session
 
+import faceDetection
+
 
 def batch_dataset(dataset, batch_size, prefetch_batch=2, drop_remainder=True, filter=None,
                   map_func=None, num_threads=16, shuffle=True, buffer_size=4096, repeat=-1):
@@ -26,7 +28,8 @@ def batch_dataset(dataset, batch_size, prefetch_batch=2, drop_remainder=True, fi
     else:
         dataset = dataset.batch(batch_size)
 
-    dataset = dataset.repeat(repeat).prefetch(prefetch_batch)
+    # if repeat != -1:
+    #     dataset = dataset.repeat(repeat).prefetch(prefetch_batch)
 
     return dataset
 
@@ -57,6 +60,7 @@ def disk_image_batch_dataset(img_paths, batch_size, labels=None, prefetch_batch=
             return map_func(*parse_func(*args))
     else:
         map_func_ = parse_func
+        # map_func_ = None
 
     # dataset = dataset.map(parse_func, num_parallel_calls=num_threads) is slower
 
@@ -155,9 +159,13 @@ class Celeba(Dataset):
 
     def __init__(self, data_dir, atts, img_resize, batch_size, prefetch_batch=2, drop_remainder=True,
                  num_threads=16, shuffle=True, buffer_size=4096, repeat=-1, sess=None, part='train', crop=True):
+        self.name_list = []
+        # self.sess = tf.Session()
         super(Celeba, self).__init__()
-
-        list_file = os.path.join(data_dir, 'list_attr_celeba.txt')
+        if part != 'test':
+            list_file = os.path.join(data_dir, 'list_attr_celeba.txt')
+        else:
+            list_file = 'test/labels.txt'
         if crop:
             img_dir_jpg = os.path.join(data_dir, 'img_align_celeba')
             img_dir_png = os.path.join(data_dir, 'img_align_celeba_png')
@@ -166,6 +174,7 @@ class Celeba(Dataset):
             img_dir_png = os.path.join(data_dir, 'img_crop_celeba_png')
 
         names = np.loadtxt(list_file, skiprows=2, usecols=[0], dtype=np.str)
+        # print(names)
         if os.path.exists(img_dir_png):
             img_paths = [os.path.join(img_dir_png, name.replace('jpg', 'png')) for name in names]
         elif os.path.exists(img_dir_jpg):
@@ -185,8 +194,12 @@ class Celeba(Dataset):
             img_size = 170
 
         def _map_func(img, label):
-            if crop:
-                img = tf.image.crop_to_bounding_box(img, offset_h, offset_w, img_size, img_size)
+            # if crop:
+                # with tf.InteractiveSession() as sess:
+                #     npImg = img.eval(session=sess)
+                    # offset_h, offset_w, img_size, img_size = faceDetection.cropFace(npImg)
+                # print(img)
+                # img = tf.image.crop_to_bounding_box(img, offset_h, offset_w, img_size, img_size)
             # img = tf.image.resize_images(img, [img_resize, img_resize]) / 127.5 - 1
             # or
             img = tf.image.resize_images(img, [img_resize, img_resize], tf.image.ResizeMethod.BICUBIC)
@@ -197,15 +210,25 @@ class Celeba(Dataset):
         if part == 'test':
             drop_remainder = False
             shuffle = False
-            repeat = 1
-            img_paths = img_paths[182637:]
-            labels = labels[182637:]
+            repeat = -1
+            paths = ['test/' + x for x in os.listdir("test") if x[-3:].lower() == 'jpg' or x[-3:].lower() == 'png']
+            self.name_list = [x for x in os.listdir("test") if x[-3:].lower() == 'jpg' or x[-3:].lower() == 'png']
+            img_paths = []
+            for path in paths:
+                tempPath = faceDetection.saveDetectedFace(path)
+                img_paths.append(tempPath)
+
+            # print(name_list)
+            # img_paths = img_paths[182637:]
+            # labels = labels[182637:]
+            # print(img_paths)
+
         elif part == 'val':
-            img_paths = img_paths[182000:182637]
-            labels = labels[182000:182637]
+            img_paths = img_paths[200000:202000]
+            labels = labels[200000:202000]
         else:
-            img_paths = img_paths[:182000]
-            labels = labels[:182000]
+            img_paths = img_paths[:200000]
+            labels = labels[:200000]
 
         dataset = disk_image_batch_dataset(img_paths=img_paths,
                                            labels=labels,

@@ -39,7 +39,7 @@ parser.add_argument('--dec_layers', dest='dec_layers', type=int, default=5)
 parser.add_argument('--dis_layers', dest='dis_layers', type=int, default=5)
 # training
 parser.add_argument('--mode', dest='mode', default='wgan', choices=['wgan', 'lsgan', 'dcgan'])
-parser.add_argument('--epoch', dest='epoch', type=int, default=200, help='# of epochs')
+parser.add_argument('--epoch', dest='epoch', type=int, default=250, help='# of epochs')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=32)
 parser.add_argument('--lr', dest='lr', type=float, default=0.0002, help='learning rate')
 parser.add_argument('--n_d', dest='n_d', type=int, default=5, help='# of d updates per g update')
@@ -220,6 +220,7 @@ try:
 
     it_per_epoch = len(tr_data) // (batch_size * (n_d + 1))
     max_it = epoch * it_per_epoch
+    it_in_epoch = 0
     for it in range(sess.run(it_cnt), max_it):
         with pylib.Timer(is_output=False) as t:
             sess.run(update_cnt)
@@ -250,7 +251,7 @@ try:
                 print('Model is saved at %s!' % save_path)
 
             # sample
-            if (it + 1) % 100 == 0:
+            if (it + 1) % 50 == 0:
                 x_sample_opt_list = [xa_sample_ipt, np.full((n_sample, img_size, img_size // 10, 3), -1.0)]
                 for i, b_sample_ipt in enumerate(b_sample_ipt_list):
                     _b_sample_ipt = (b_sample_ipt * 2 - 1) * thres_int
